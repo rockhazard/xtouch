@@ -17,7 +17,7 @@ __author__ = "Ike Davis"
 
 
 def gen_random_name(filename=8, ext="txt"):
-    characters = string.printable[0:63]
+    characters = string.printable[0:62]
     filenameList = []
     extList = []
 
