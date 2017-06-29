@@ -44,7 +44,7 @@ def main(*args):
         description=dedent("""\
             %(prog)s creates a given number of files with random names in the 
             parent directory."""),
-        epilog="""Author: Ike Davis\nLicense: MIT""")
+        epilog='Author: Ike Davis License: MIT')
     parser.add_argument('--version', help='print version info then exit',
                         version='%(prog)s 1.0', action='version')
     parser.add_argument('--generate', '-g', nargs=3,
@@ -54,16 +54,25 @@ def main(*args):
                                     of NAME_LENGTH with extension EXT_LENGTH. If
                                     EXT_LENGTH is a string instead of an integer,
                                     that string will be used for each new file. 
-                                    The default value is "txt".
+                                    The default extension is "txt".
                                     """))
+    parser.add_argument('--files', '-f', nargs='?', const=4, type=int,
+                        metavar=('NUMBER_OF_FILES'),
+                        help=dedent("""Create a given NUMBER_OF_FILES in an 
+                            '8.txt' pattern, defaulting to 4 files."""))
     args = parser.parse_args()
-    if args.generate:
-        try:
+    try:
+        if args.generate:
             numberOfFiles = int(args.generate[2]) + 1
             for i in range(1, numberOfFiles):
                 run('touch {}'.format(gen_random_name(
                     int(args.generate[0]), args.generate[1])), shell=True)
-        except ValueError as error:
-            sys.exit(error)
+        elif args.files:
+            numberOfFiles = args.files + 1
+            for i in range(1, numberOfFiles):
+                run('touch {}'.format(gen_random_name()), shell=True)
+    except ValueError as error:
+        sys.exit(error)
+
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

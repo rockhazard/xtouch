@@ -7,4 +7,4 @@ Xtouch is an automation wrapper for the GNU touch command. It enables users to p
 After ensuring the file is executable, type `xtouch.py --help`.
 
 ### Requirements
-Linux
+Linux and Python 3
