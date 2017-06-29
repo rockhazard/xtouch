@@ -23,6 +23,7 @@ def gen_random_name(filename=8, ext="txt"):
     filenameList = []
     extList = []
 
+    # generate name and extension
     for i in range(1, filename + 1):
         filenameList.append(random.choice(characters))
     try:
@@ -34,13 +35,15 @@ def gen_random_name(filename=8, ext="txt"):
 
     name = "".join(filenameList)
     randName = name
+
+    # attach any prefix or suffix from commandline arguments
     if _state['prefix']:
         randName = _state['prefix'] + name
     if _state['suffix']:
         randName += _state['suffix']
-
     randName += '.' + extension
 
+    # convert filename to upper or lower case
     if _state['upper']:
         return randName.upper()
     elif _state['lower']:
@@ -87,6 +90,8 @@ def main(*args):
     _state['lower'] = args.lowercase
     _state['prefix'] = args.prefix
     _state['suffix'] = args.suffix
+
+    # produce required number of files
     try:
         if args.generate:
             numberOfFiles = int(args.generate[2]) + 1
