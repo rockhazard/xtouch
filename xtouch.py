@@ -63,29 +63,30 @@ def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt"):
         extension = "".join(extList)
     except ValueError:
         extension = ext
-
-    name = "".join(randStrLenList)
-    randName = name
+    if not randStrLenList:
+        filename = ''
+    else:
+        filename = "".join(randStrLenList)
 
     # attach any prefix, suffix, and extension from arguments
     if prefix == '%':
-        randName = random_word() + '_' + name
+        filename = random_word() + '_' + filename
     elif prefix != '/':
-        randName = prefix + name
+        filename = prefix + filename
     if suffix == '%':
-        randName += '_' + random_word()
+        filename += '_' + random_word()
     elif suffix != '/':
-        randName += suffix
+        filename += suffix
     if extension != '/':
-        randName += '.' + extension
+        filename += '.' + extension
 
     # convert filename to upper or lower case
     if _state['upper']:
-        return randName.upper()
+        return filename.upper()
     elif _state['lower']:
-        return randName.lower()
+        return filename.lower()
     else:
-        return randName
+        return filename
 
 
 def main(*args):
@@ -110,8 +111,9 @@ def main(*args):
                                     'tmp_.2._work.log 1' may yield 'tmp_Yz_work.log'
                                     where 'int' is an integer and produces a 
                                     random alphanumeric string of 'int' characters.
-                                    Use '%' to replace 'str' with a random dictionary
-                                    word.
+                                    Use '%%' to replace 'str' with a random dictionary
+                                    word. Using 0 for 'int' requires that at least
+                                    one 'str' contains a character other than '/'.
                                     """))
     parser.add_argument('--files', '-f', nargs='?', const=4, type=int,
                         metavar=('NUMBER_OF_FILES'),
