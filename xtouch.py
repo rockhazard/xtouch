@@ -96,7 +96,7 @@ def main(*args):
     parser = argparse.ArgumentParser(
         prog=sys.argv[0][2:],
         description=dedent("""\
-            !(prog)s creates a given number of files with random names in the 
+            %(prog)s creates a given number of files with random names in the 
             parent directory."""),
         epilog='Author: Ike Davis License: MIT')
     parser.add_argument('--version', help='print version info then exit',
@@ -126,17 +126,17 @@ def main(*args):
     args = parser.parse_args()
     _state['upper'] = args.uppercase
     _state['lower'] = args.lowercase
-
+    fnIndex = 0
     # produce required number of files
     try:
         if args.generate:
             match = match_args(args.generate[0])
             numberOfFiles = int(args.generate[1]) + 1
             for i in range(1, numberOfFiles):
-                run('touch {}'.format(gen_random_name(match['prefix'],
-                                                      match['size'],
-                                                      match['suffix'],
-                                                      match['extension'])),
+                name = gen_random_name(match['prefix'], match['size'],
+                                       match['suffix'],
+                                       match['extension'])
+                run('touch {}'.format(name),
                     shell=True)
         elif args.files:
             numberOfFiles = args.files + 1
