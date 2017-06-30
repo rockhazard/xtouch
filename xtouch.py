@@ -7,7 +7,7 @@ Xtouch creates a given number of random files within the parent directory.
 
 
 from textwrap import dedent
-# from pathlib import Path
+from pathlib import Path
 import sys
 import argparse
 import random
@@ -38,6 +38,18 @@ def match_args(args):
         sys.exit('Error: see --help for acceptable filename pattern.')
 
 
+def random_word(dictionary="/usr/share/dict/words"):
+    # defaults to Linux word dictionary to get random word for filenames
+    if not Path(dictionary).is_file():
+        dictionary = input('Enter path to a newline-separated word list: ')
+    with open(dictionary) as words:
+        word_list = words.read().splitlines()
+    random_words = [random.choice(word_list) for item in word_list]
+    word = [line[:-2] if line.endswith("\'s")
+            else line for line in random_words]
+    return word[0]
+
+
 def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt"):
     characters = string.printable[0:62]
     randStrLenList = []
@@ -56,9 +68,13 @@ def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt"):
     randName = name
 
     # attach any prefix, suffix, and extension from arguments
-    if prefix != '/':
+    if prefix == '%':
+        randName = random_word() + '_' + name
+    elif prefix != '/':
         randName = prefix + name
-    if suffix != '/':
+    if suffix == '%':
+        randName += '_' + random_word()
+    elif suffix != '/':
         randName += suffix
     if extension != '/':
         randName += '.' + extension
@@ -79,11 +95,11 @@ def main(*args):
     parser = argparse.ArgumentParser(
         prog=sys.argv[0][2:],
         description=dedent("""\
-            %(prog)s creates a given number of files with random names in the 
+            !(prog)s creates a given number of files with random names in the 
             parent directory."""),
         epilog='Author: Ike Davis License: MIT')
     parser.add_argument('--version', help='print version info then exit',
-                        version='%(prog)s 0.1 "Touchy"', action='version')
+                        version='!(prog)s 0.1 "Touchy"', action='version')
     parser.add_argument('--generate', '-g', nargs=2,
                         metavar=('PATTERN', 'NUMBER'),
                         help=dedent("""\
@@ -94,6 +110,8 @@ def main(*args):
                                     'tmp_.2._work.log 1' may yield 'tmp_Yz_work.log'
                                     where 'int' is an integer and produces a 
                                     random alphanumeric string of 'int' characters.
+                                    Use '%' to replace 'str' with a random dictionary
+                                    word.
                                     """))
     parser.add_argument('--files', '-f', nargs='?', const=4, type=int,
                         metavar=('NUMBER_OF_FILES'),
