@@ -19,19 +19,32 @@ __author__ = "Ike Davis"
 _state = dict(upper=False, lower=False, prefix=False, suffix=False)
 
 
-def format_args(args):
-    regex = r'^(?P<prefix>\S*)\.(?P<size>\d+)\.(?P<suffix>\S*)\.(?P<extension>\S*)$'
-    matcher = re.compile(regex)
+# use regex to parse the --generate option's arguments
+# matches against pattern "str.int.str.str"
+def match_args(args):
+    pattern = r'^(?P<prefix>\S*)\.(?P<size>\d+)\.(?P<suffix>\S*)\.(?P<extension>\S*)$'
+    if re.compile(pattern).match(args):
+        matcher = re.search(pattern, args)
+        groups = dict(prefix=matcher.group('prefix'),
+                      size=matcher.group('size'),
+                      suffix=matcher.group('suffix'),
+                      extension=matcher.group('extension'))
+        if sum([len(groups['prefix']), int(groups['size']), len(groups['suffix']),
+                len(groups['extension'])]) <= 255:
+            return groups
+        else:
+            sys.exit('Error: filename too long!')
+    else:
+        sys.exit('Error: see --help for acceptable filename pattern.')
 
 
-def gen_random_name(filename=8, ext="txt"):
+def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt"):
     characters = string.printable[0:62]
-    filenameList = []
+    randStrLenList = []
     extList = []
-
-    # generate name and extension
-    for i in range(1, filename + 1):
-        filenameList.append(random.choice(characters))
+    # randStrLen = int(randStrLen)
+    for i in range(1, int(randStrLen) + 1):
+        randStrLenList.append(random.choice(characters))
     try:
         for i in range(1, int(ext) + 1):
             extList.append(random.choice(characters))
@@ -39,15 +52,16 @@ def gen_random_name(filename=8, ext="txt"):
     except ValueError:
         extension = ext
 
-    name = "".join(filenameList)
+    name = "".join(randStrLenList)
     randName = name
 
-    # attach any prefix or suffix from commandline arguments
-    if _state['prefix']:
-        randName = _state['prefix'] + name
-    if _state['suffix']:
-        randName += _state['suffix']
-    randName += '.' + extension
+    # attach any prefix, suffix, and extension from arguments
+    if prefix != '/':
+        randName = prefix + name
+    if suffix != '/':
+        randName += suffix
+    if extension != '/':
+        randName += '.' + extension
 
     # convert filename to upper or lower case
     if _state['upper']:
@@ -70,23 +84,21 @@ def main(*args):
         epilog='Author: Ike Davis License: MIT')
     parser.add_argument('--version', help='print version info then exit',
                         version='%(prog)s 0.1 "Touchy"', action='version')
-    parser.add_argument('--generate', '-g', nargs=3,
-                        metavar=('NAME_LENGTH', 'EXT_LENGTH', 'NUMBER'),
+    parser.add_argument('--generate', '-g', nargs=2,
+                        metavar=('PATTERN', 'NUMBER'),
                         help=dedent("""\
-                                    Create a NUMBER of files with random names 
-                                    of NAME_LENGTH with extension EXT_LENGTH. If
-                                    EXT_LENGTH is a string instead of an integer,
-                                    that string will be used for each new file. 
-                                    The default extension is "txt".
+                                    Create a NUMBER of files according to 
+                                    PATTERN, in the form: 'str.int.str.str'. The 
+                                    'int' is required, but any other str may be
+                                    '/' in order to exclude it. Example:
+                                    'tmp_.2._work.log 1' may yield 'tmp_Yz_work.log'
+                                    where 'int' is an integer and produces a 
+                                    random alphanumeric string of 'int' characters.
                                     """))
     parser.add_argument('--files', '-f', nargs='?', const=4, type=int,
                         metavar=('NUMBER_OF_FILES'),
                         help=dedent("""Create a given NUMBER_OF_FILES in an 
                             '8.txt' pattern, defaulting to 4 files."""))
-    parser.add_argument('--prefix', '-p', nargs='?', help=dedent("""Prepend the 
-                            given string of PREFIX to all files."""))
-    parser.add_argument('--suffix', '-s', nargs='?', help=dedent("""Append the 
-                            given string of SUFFIX to all files."""))
     parser.add_argument('--uppercase', '-u', action='store_true',
                         help=dedent("""Make all filenames uppercase."""))
     parser.add_argument('--lowercase', '-l', action='store_true',
@@ -94,16 +106,18 @@ def main(*args):
     args = parser.parse_args()
     _state['upper'] = args.uppercase
     _state['lower'] = args.lowercase
-    _state['prefix'] = args.prefix
-    _state['suffix'] = args.suffix
 
     # produce required number of files
     try:
         if args.generate:
-            numberOfFiles = int(args.generate[2]) + 1
+            match = match_args(args.generate[0])
+            numberOfFiles = int(args.generate[1]) + 1
             for i in range(1, numberOfFiles):
-                run('touch {}'.format(gen_random_name(
-                    int(args.generate[0]), args.generate[1])), shell=True)
+                run('touch {}'.format(gen_random_name(match['prefix'],
+                                                      match['size'],
+                                                      match['suffix'],
+                                                      match['extension'])),
+                    shell=True)
         elif args.files:
             numberOfFiles = args.files + 1
             for i in range(1, numberOfFiles):
