@@ -11,11 +11,17 @@ from textwrap import dedent
 import sys
 import argparse
 import random
+import re
 import string
 from subprocess import run
 __author__ = "Ike Davis"
 
 _state = dict(upper=False, lower=False, prefix=False, suffix=False)
+
+
+def format_args(args):
+    regex = r'^(?P<prefix>\S*)\.(?P<size>\d+)\.(?P<suffix>\S*)\.(?P<extension>\S*)$'
+    matcher = re.compile(regex)
 
 
 def gen_random_name(filename=8, ext="txt"):
