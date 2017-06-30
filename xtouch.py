@@ -102,9 +102,9 @@ def main(*args):
     parser.add_argument('--version', help='print version info then exit',
                         version='!(prog)s 0.1 "Touchy"', action='version')
     parser.add_argument('--generate', '-g', nargs=2,
-                        metavar=('PATTERN', 'NUMBER'),
+                        metavar=('PATTERN', 'NUMBER_OF_FILES'),
                         help=dedent("""\
-                                    Create a NUMBER of files according to 
+                                    Create a NUMBER_OF_FILES according to a
                                     PATTERN, in the form: 'str.int.str.str'. The 
                                     'int' is required, but any other str may be
                                     '/' in order to exclude it. Example:
@@ -126,7 +126,6 @@ def main(*args):
     args = parser.parse_args()
     _state['upper'] = args.uppercase
     _state['lower'] = args.lowercase
-    fnIndex = 0
     # produce required number of files
     try:
         if args.generate:
