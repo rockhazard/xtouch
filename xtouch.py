@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """
 ===============================================================================
-Xtouch creates a given number of random files within the parent directory.
+Xtouch automates GNU touch by creating a given number of randomly-named files 
+within the present working directory. This is useful for creating dummy/mock
+files or creating and opening several new files for editing in other programs.
+
+Features:
+* Define filenames via a pattern: prefix.integer.suffix.extension
+* Default to 8.txt pattern
+
+NOTE: This program does not currently support GNU touch options.
+License: MIT
 ===============================================================================
 """
 
@@ -16,7 +25,7 @@ import string
 from subprocess import run
 __author__ = "Ike Davis"
 
-_state = dict(upper=False, lower=False, prefix=False, suffix=False)
+_state = dict(uppercase=False, lowercase=False)
 
 
 # use regex to parse the --generate option's arguments
@@ -81,9 +90,9 @@ def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt"):
         filename += '.' + extension
 
     # convert filename to upper or lower case
-    if _state['upper']:
+    if _state['uppercase']:
         return filename.upper()
-    elif _state['lower']:
+    elif _state['lowercase']:
         return filename.lower()
     else:
         return filename
@@ -115,20 +124,20 @@ def main(*args):
                                     word. Using 0 for 'int' requires that at least
                                     one 'str' contains a character other than '/'.
                                     """))
-    parser.add_argument('--files', '-f', nargs='?', const=4, type=int,
+    parser.add_argument('--files', '-f', nargs='?', const=1, type=int,
                         metavar=('NUMBER_OF_FILES'),
                         help=dedent("""Create a given NUMBER_OF_FILES in an 
-                            '8.txt' pattern, defaulting to 4 files."""))
+                            '8.txt' pattern, defaulting to one file."""))
     parser.add_argument('--uppercase', '-u', action='store_true',
                         help=dedent("""Make all filenames uppercase."""))
     parser.add_argument('--lowercase', '-l', action='store_true',
                         help=dedent("""Make all filenames lowercase."""))
     args = parser.parse_args()
-    _state['upper'] = args.uppercase
-    _state['lower'] = args.lowercase
+    _state['uppercase'] = args.uppercase
+    _state['lowercase'] = args.lowercase
     # produce required number of files
     try:
-        if args.generate:
+        if args.generate: # consume pattern
             match = match_args(args.generate[0])
             numberOfFiles = int(args.generate[1]) + 1
             for i in range(1, numberOfFiles):
@@ -137,7 +146,7 @@ def main(*args):
                                        match['extension'])
                 run('touch {}'.format(name),
                     shell=True)
-        elif args.files:
+        elif args.files: # default
             numberOfFiles = args.files + 1
             for i in range(1, numberOfFiles):
                 run('touch {}'.format(gen_random_name()), shell=True)
