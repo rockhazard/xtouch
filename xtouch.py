@@ -62,7 +62,7 @@ def random_word(dictionary="/usr/share/dict/words"):
     return word[0]
 
 
-def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt"):
+def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt", sep='_'):
     characters = string.printable[0:62]
     randStrLenList = []
     extList = []
@@ -82,11 +82,11 @@ def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt"):
 
     # attach any prefix, suffix, and extension from arguments
     if prefix == '%':
-        filename = random_word() + '_' + filename
+        filename = random_word() + sep + filename
     elif prefix != '/':
         filename = prefix + filename
     if suffix == '%':
-        filename += '_' + random_word()
+        filename += sep + random_word()
     elif suffix != '/':
         filename += suffix
     if extension != '/':
@@ -99,6 +99,43 @@ def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt"):
         return filename.lower()
     else:
         return filename
+
+
+def file_factory(matchf, nFiles, sep='_'):
+    # use user args to produce unique files
+    try:
+        match = matchf  # per
+        numberOfFiles = int(nFiles)  # per
+
+        def fileSet(numberOfFiles):
+            return {
+                gen_random_name(match['prefix'], match['size'],
+                                match['suffix'],
+                                match['extension'], sep)
+                for i in range(0, numberOfFiles)
+            }
+
+        name = fileSet(numberOfFiles)
+        # ensure proper number of unique files are created
+        if len(name) != numberOfFiles:
+            while len(name) < numberOfFiles:
+                dif = numberOfFiles - len(name)
+                print('Filenames remaining: {}'.format(dif))
+                remainder = fileSet(dif)
+                name = name.union(remainder)
+                print('Deduping run...')
+            else:
+                print(dedent("""\
+                             Created {} files.
+                             Increasing "int" reduces duplicate name generation.
+                             """).format(len(name)))
+
+        name = list(name)
+        for i in range(0, numberOfFiles):
+            run('touch {}'.format(name[i]),
+                shell=True)
+    except ValueError as error:
+        sys.exit(error)
 
 
 def main(*args):
@@ -140,16 +177,17 @@ def main(*args):
     _state['lowercase'] = args.lowercase
     # produce required number of files
     try:
-        if args.generate: # consume pattern
-            match = match_args(args.generate[0])
-            numberOfFiles = int(args.generate[1]) + 1
-            for i in range(1, numberOfFiles):
-                name = gen_random_name(match['prefix'], match['size'],
-                                       match['suffix'],
-                                       match['extension'])
-                run('touch {}'.format(name),
-                    shell=True)
-        elif args.files: # default
+        if args.generate:  # consume pattern
+            file_factory(match_args(args.generate[0]), args.generate[1])
+            # match = match_args(args.generate[0])
+            # numberOfFiles = int(args.generate[1]) + 1
+            # for i in range(1, numberOfFiles):
+            #     name = gen_random_name(match['prefix'], match['size'],
+            #                            match['suffix'],
+            #                            match['extension'])
+            #     run('touch {}'.format(name),
+            #         shell=True)
+        elif args.files:  # default
             numberOfFiles = args.files + 1
             for i in range(1, numberOfFiles):
                 run('touch {}'.format(gen_random_name()), shell=True)
