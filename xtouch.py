@@ -6,11 +6,13 @@ within the present working directory. This is useful for creating dummy/mock
 files or creating and opening several new files for editing in other programs.
 
 Features:
-* Define filenames via a pattern: prefix.integer.suffix.extension
-* Default to 8.txt pattern
+* Define filenames via a pattern: prefix.integer.suffix.extension.
+* Default to 8.txt pattern.
 * Set case of generated files.
 
 NOTE: This program does not currently support GNU touch options.
+Written by Ike Davis
+
 License: MIT
 ===============================================================================
 """
