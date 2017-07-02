@@ -1,30 +1,32 @@
 #!/usr/bin/env python3
 """
-===============================================================================
-Xtouch automates GNU touch by creating a given number of randomly-named files 
-within the present working directory. This is useful for creating dummy/mock
-files or creating and opening several new files for editing in other programs.
+================================================================================
+Xtouch automates GNU touch by creating a given number of randomly-named files. 
+This is useful for creating mock files or creating and opening several new files
+for editing in other programs.
 
 Features:
 * Define filenames via a pattern: prefix.integer.suffix.extension.
 * Default to 8.txt pattern.
 * Set case of generated files.
+* Pass standard gnu touch options to generated files.
 
 NOTE: This program does not currently support GNU touch options.
+
 Written by Ike Davis
 
 License: MIT
-===============================================================================
+================================================================================
 """
 
 
-from textwrap import dedent
-from pathlib import Path
 import sys
 import argparse
 import random
 import re
 import string
+from textwrap import dedent
+from pathlib import Path
 from subprocess import run
 __author__ = "Ike Davis"
 
@@ -124,12 +126,12 @@ def touch_args():
 
 
 def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True):
-    # use user args to produce unique files
+    # use user-supplied arguments to produce unique files
     try:
         match = match_args(pattern)
         numberOfFiles = int(nFiles)
-        # create set of unique filenames
 
+        # create set of unique filenames
         def gen_files_set(numberOfFiles):
             if default:
                 return {gen_random_name() for i in range(numberOfFiles)}
@@ -197,7 +199,7 @@ def main(*args):
                         help=dedent("""Make all filenames lowercase."""))
 
     # GNU Touch Options
-    parser.add_argument('--accesstime', '-a', nargs=1, metavar=('ATIME'),
+    parser.add_argument('--accesstime', '-a', action='store_true',
                         help=dedent("""Change only the access time."""))
     parser.add_argument('--nocreate', '-c', action='store_true',
                         help=dedent("""Do not create any files."""))
@@ -208,18 +210,14 @@ def main(*args):
                             affect each symbolic link instead of any referenced 
                             file (useful only on systems that can change the 
                             timestamps of a symlink)"""))
-    parser.add_argument('--mtime', '-m', nargs=1, metavar=('MTIME'),
+    parser.add_argument('--mtime', '-m', action='store_true',
                         help=dedent("""Change only the modification time."""))
     parser.add_argument('--reference', '-r', nargs=1, metavar=('REFERENCE'),
                         help=dedent("""Use this file's times instead of current time."""))
     parser.add_argument('--stamp', '-t', nargs=1, metavar=('STAMP'),
                         help=dedent("""Use [[CC]YY]MMDDhhmm[.ss] instead of 
                                     current time."""))
-    parser.add_argument('--time', nargs=1, metavar=('WORD'),
-                        help=dedent("""Change the specified time: WORD is access, 
-                            atime, or use: equivalent to '-a WORD' is modify or 
-                            mtime: equivalent to '-m'."""))
-    parser.add_argument('--original', '-o', nargs=1, metavar=('FILE'),
+    parser.add_argument('--original', '-o', nargs='*', metavar=('FILE'),
                         help=dedent("""Basic touch without automation or options."""))
 
     args = parser.parse_args()
@@ -237,21 +235,20 @@ def main(*args):
     if args.nodereference:
         _state['nodereference'][1] = args.nodereference
     if args.mtime:
-        _state['modtime'][1] = args.mtime[0]
+        _state['modtime'][1] = args.mtime
     if args.reference:
         _state['reference'][1] = args.reference[0]
     if args.stamp:
         _state['stamp'][1] = args.stamp[0]
-    if args.time:
-        _state['time'][1] = '=' + args.time[0]
     # create options string
 
     if args.files:  # default 8.txt filename pattern
         file_factory(nFiles=args.files)
     elif args.generate:  # consume user filename pattern
         file_factory(args.generate[0], args.generate[1], default=False)
-    elif args.original:
-        run('touch {}'.format(' '.join(sys.argv[2:])), shell=True)
+    else:
+        touch_str = input('Enter touch arguments: ')
+        run('touch {}'.format(touch_str), shell=True)
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    main(sys.argv[1:])
