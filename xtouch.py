@@ -11,8 +11,6 @@ Features:
 * Set case of generated files.
 * Pass standard gnu touch options to generated files.
 
-NOTE: This program does not currently support GNU touch options.
-
 Written by Ike Davis
 
 License: MIT
@@ -30,16 +28,16 @@ from pathlib import Path
 from subprocess import run
 __author__ = "Ike Davis"
 
-_state = dict(uppercase=False,
-              lowercase=False,
-              accesstime=['-a', False],
-              nocreate=['-c', False],
-              date=['-d', False],
-              nodereference=['-h', False],
-              modtime=['-m', False],
-              reference=['-r', False],
-              stamp=['-t', False],
-              time=['--time', False])
+_options = dict(uppercase=False,
+                lowercase=False,
+                accesstime=['-a', False],
+                nocreate=['-c', False],
+                date=['-d', False],
+                nodereference=['-h', False],
+                modtime=['-m', False],
+                reference=['-r', False],
+                stamp=['-t', False],
+                time=['--time', False])
 
 
 # use regex to parse the --generate option's arguments
@@ -77,7 +75,6 @@ def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt", sep='_'):
     characters = string.printable[0:62]
     randStrLenList = []
     extList = []
-    # randStrLen = int(randStrLen)
     for i in range(1, int(randStrLen) + 1):
         randStrLenList.append(random.choice(characters))
     try:
@@ -104,24 +101,29 @@ def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt", sep='_'):
         filename += '.' + extension
 
     # convert filename to upper or lower case
-    if _state['uppercase']:
+    if _options['uppercase']:
         return filename.upper()
-    elif _state['lowercase']:
+    elif _options['lowercase']:
         return filename.lower()
     else:
         return filename
 
 
-def touch_args():
-    # create options string to feed to GNU touch
+def shell_args(dictionary=_options):
+    # return options string for a shell command; takes dictionary in form
+    #  dict[opt, bool], where returned options' bools are either a string
+    # (an argument) or True (a flag).
     argString = ''
-    for key, value in _state.items():
-        if key != 'uppercase' and key != 'lowercase':
-            option_test = _state[key][1]
-            if type(option_test) != bool:
-                argString += ' ' + _state[key][0] + ' ' + _state[key][1] + ' '
-            if option_test != str and option_test == True:
-                argString += ' ' + _state[key][0] + ' '
+    for key, value in dictionary.items():
+        if key not in ('uppercase', 'lowercase'):
+            bool_test = dictionary[key][1]
+            # options with arguments
+            if type(bool_test) != bool:
+                argString += ' ' + dictionary[key][0] + ' ' + \
+                    dictionary[key][1] + ' '
+            # flags
+            if bool_test != str and bool_test == True:
+                argString += ' ' + dictionary[key][0] + ' '
     return argString
 
 
@@ -143,7 +145,7 @@ def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True):
                         }
 
         name = gen_files_set(numberOfFiles)
-        # if random module generates duplicate names, build set of unique names
+        # build set until all filenames are unique
         if len(name) != numberOfFiles:
             print('Building unique filenames...')
             while len(name) < numberOfFiles:
@@ -152,7 +154,7 @@ def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True):
                 name = name.union(remainder)
 
         # write files
-        options = touch_args()
+        options = shell_args()
         name = list(name)
         for i in range(numberOfFiles):
             run('touch {} {}'.format(options, name[i]), shell=True)
@@ -221,32 +223,33 @@ def main(*args):
                         help=dedent("""Basic touch without automation or options."""))
 
     args = parser.parse_args()
-    # set options dictionary
-    # xtouch
-    _state['uppercase'] = args.uppercase
-    _state['lowercase'] = args.lowercase
+    # set options dictionary values
     # GNU touch
     if args.accesstime:
-        _state['accesstime'][1] = args.accesstime
+        _options['accesstime'][1] = args.accesstime
     if args.nocreate:
-        _state['nocreate'][1] = args.nocreate
+        _options['nocreate'][1] = args.nocreate
     if args.date:
-        _state['date'][1] = args.date[0]
+        _options['date'][1] = args.date[0]
     if args.nodereference:
-        _state['nodereference'][1] = args.nodereference
+        _options['nodereference'][1] = args.nodereference
     if args.mtime:
-        _state['modtime'][1] = args.mtime
+        _options['modtime'][1] = args.mtime
     if args.reference:
-        _state['reference'][1] = args.reference[0]
+        _options['reference'][1] = args.reference[0]
     if args.stamp:
-        _state['stamp'][1] = args.stamp[0]
-    # create options string
+        _options['stamp'][1] = args.stamp[0]
+    # xtouch custom option values
+    # add these xtouch-only options in _options to ignored tuple in shell_args
+    _options['uppercase'] = args.uppercase
+    _options['lowercase'] = args.lowercase
 
-    if args.files:  # default 8.txt filename pattern
+    # create options string and write requested files
+    if args.files:  # default filename pattern
         file_factory(nFiles=args.files)
-    elif args.generate:  # consume user filename pattern
+    elif args.generate:  # employ user filename pattern
         file_factory(args.generate[0], args.generate[1], default=False)
-    else:
+    else:  # for direct access to gnu touch
         touch_str = input('Enter touch arguments: ')
         run('touch {}'.format(touch_str), shell=True)
 
