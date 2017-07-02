@@ -219,9 +219,8 @@ def main(*args):
                         help=dedent("""Change the specified time: WORD is access, 
                             atime, or use: equivalent to '-a WORD' is modify or 
                             mtime: equivalent to '-m'."""))
-    parser.add_argument('--original', '-o', action='store_true',
-                        help=dedent("""Use this option when using touch in its
-                            traditional manner."""))
+    parser.add_argument('--original', '-o', nargs=1, metavar=('FILE'),
+                        help=dedent("""Basic touch without automation or options."""))
 
     args = parser.parse_args()
     # set options dictionary
