@@ -34,7 +34,7 @@ _options = dict(uppercase=False, lowercase=False, touch_options=False,
 
 
 # use regex to parse the --generate option's arguments
-# matches against pattern "str.int.str.str"
+# matches against pattern "str.int.str.str|int"
 def match_args(args):
     pattern = r'^(?P<prefix>\S*)\.(?P<size>\d+)\.(?P<suffix>\S*)\.(?P<extension>\S*)$'
     if re.compile(pattern).match(args):
@@ -76,19 +76,28 @@ def gen_filename(prefix='/', size=8, suffix='/', ext="txt", sep='_',
     characters = string.printable[0:62]
     sizeList = []
     extList = []
-
+    size = int(size)
+    try:  # convert ext to int if possible
+        if type(int(ext)) is int:
+            ext = int(ext)
+    except ValueError:
+        pass
     # either use increment feature or use size to build random names
-    if _options['increment']:
+    if _options['increment'] and size > 0:
         filename = increment_filename(zeroes, count)
     else:
-        for i in range(1, int(size) + 1):
+        for i in range(1, size + 1):
             sizeList.append(random.choice(characters))
         filename = "".join(sizeList)
-    try:
-        for i in range(1, int(ext) + 1):
-            extList.append(random.choice(characters))
-        extension = "".join(extList)
-    except ValueError:
+    if type(ext) is int:
+        if _options['increment']:
+            extzeroes = int(ext)
+            extension = increment_filename(extzeroes, count)
+        else:
+            for i in range(1, ext + 1):
+                extList.append(random.choice(characters))
+            extension = "".join(extList)
+    else:
         extension = ext
 
     # attach any prefix, suffix, and extension from arguments
@@ -114,6 +123,21 @@ def gen_filename(prefix='/', size=8, suffix='/', ext="txt", sep='_',
 
 def gen_files_set(numberOfFiles, zeroes, default, match, sep):
     # create set of unique filenames
+    try:  # calculate maximum unique files to avoid infinite loop at set build
+        sizeMaxUniqueFiles = int(
+            ''.join(['9' for i in range(int(match['size']))]))
+    except ValueError:
+        sizeMaxUniqueFiles = 1
+    try:
+        extMaxUniqueFiles = int(
+            ''.join(['9' for i in range(int(match['extension']))]))
+    except ValueError:
+        extMaxUniqueFiles = 1
+    maxUniqueFiles = sizeMaxUniqueFiles * extMaxUniqueFiles
+    if maxUniqueFiles < numberOfFiles:
+        sys.exit('Error: max number of files for pattern ({}) exceeded'.format(
+            maxUniqueFiles))
+
     if default:
         return {gen_filename(zeroes, count=i)
                 for i in range(numberOfFiles)}
@@ -128,39 +152,36 @@ def gen_files_set(numberOfFiles, zeroes, default, match, sep):
 
 def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True):
     # use user-supplied arguments to produce unique files
-    try:
-        match = match_args(pattern)
-        numberOfFiles = int(nFiles)
-        # avoid looping clobber
+    match = match_args(pattern)
+    numberOfFiles = int(nFiles)
+    # avoid looping clobber
+    if _options['increment'] and int(match['size']) > 0:
         maxFiles = int(''.join(['9' for i in range(int(match['size']))]))
-        if _options['increment']:
-            if numberOfFiles > maxFiles:
-                sys.exit(dedent("""\
-                                    Error: requested number of files exceeds
-                                    maximum. Increase 'int' amount."""))
+        if numberOfFiles > maxFiles:
+            sys.exit(dedent("""\
+                                Error: requested number of files exceeds
+                                maximum. Increase 'int' amount."""))
 
-        names = gen_files_set(numberOfFiles, str(
-            match['size']), default, match, sep)
-        # build set until requested number of filenames in set
-        if len(names) != numberOfFiles:
-            print('Building unique filenames...')
-            while len(names) < numberOfFiles:
-                diff = numberOfFiles - len(names)
-                remainder = gen_files_set(
-                    diff, str(match['size']), default, match, sep)
-                names = names.union(remainder)
+    names = gen_files_set(numberOfFiles, str(
+        match['size']), default, match, sep)
+    # build set until requested number of filenames in set
+    if len(names) != numberOfFiles:
+        print('Building unique filenames...')
+        while len(names) < numberOfFiles:
+            diff = numberOfFiles - len(names)
+            remainder = gen_files_set(
+                diff, str(match['size']), default, match, sep)
+            names = names.union(remainder)
 
-        # write files
-        if _options['touch_options']:
-            options = _options['touch_options']
-        else:
-            options = ''
-        names = list(names)
-        for i in range(numberOfFiles):
-            run('touch {} {}'.format(options, names[i]), shell=True)
-        print('Generated {} files.'.format(len(names)))
-    except ValueError as error:
-        sys.exit(error)
+    # write files
+    if _options['touch_options']:
+        options = _options['touch_options']
+    else:
+        options = ''
+    names = list(names)
+    for i in range(numberOfFiles):
+        run('touch {} {}'.format(options, names[i]), shell=True)
+    print('Generated {} files.'.format(len(names)))
 
 
 def main(*args):
