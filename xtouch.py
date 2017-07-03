@@ -7,9 +7,10 @@ for editing in other programs.
 
 Features:
 * Define filenames via a pattern: prefix.integer.suffix.extension.
-* Default to 8.txt pattern.
+* Default pattern.
 * Set case of generated files.
 * Pass standard gnu touch options to generated files.
+* Full use of gnu touch from xtouch.
 
 Written by Ike Davis
 
@@ -28,16 +29,8 @@ from pathlib import Path
 from subprocess import run
 __author__ = "Ike Davis"
 
-_options = dict(uppercase=False,
-                lowercase=False,
-                accesstime=['-a', False],
-                nocreate=['-c', False],
-                date=['-d', False],
-                nodereference=['-h', False],
-                modtime=['-m', False],
-                reference=['-r', False],
-                stamp=['-t', False],
-                time=['--time', False])
+_options = dict(uppercase=False, lowercase=False, touch_options=False,
+                increment=False)
 
 
 # use regex to parse the --generate option's arguments
@@ -71,21 +64,32 @@ def random_word(dictionary="/usr/share/dict/words"):
     return word[0]
 
 
-def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt", sep='_'):
+def increment_filename(zeroes, count):
+    place = len(str(count))
+    zeroCount = int(zeroes) - place
+    file_count = '0' * zeroCount + str(count)
+    return file_count
+
+
+def gen_filename(prefix='/', randStrLen=8, suffix='/', ext="txt", sep='_', zeroes=5, count=5):
     characters = string.printable[0:62]
     randStrLenList = []
     extList = []
-    for i in range(1, int(randStrLen) + 1):
-        randStrLenList.append(random.choice(characters))
+
+    if _options['increment']:
+        filename = increment_filename(zeroes, count)
+    else:
+        for i in range(1, int(randStrLen) + 1):
+            randStrLenList.append(random.choice(characters))
     try:
         for i in range(1, int(ext) + 1):
             extList.append(random.choice(characters))
         extension = "".join(extList)
     except ValueError:
         extension = ext
-    if not randStrLenList:
+    if not filename:
         filename = ''
-    else:
+    elif randStrLenList:
         filename = "".join(randStrLenList)
 
     # attach any prefix, suffix, and extension from arguments
@@ -109,38 +113,26 @@ def gen_random_name(prefix='/', randStrLen=8, suffix='/', ext="txt", sep='_'):
         return filename
 
 
-def shell_args(dictionary=_options):
-    # return options string for a shell command; takes dictionary in form
-    #  dict[opt, bool], where returned options' bools are either a string
-    # (an argument) or True (a flag).
-    argString = ''
-    for key, value in dictionary.items():
-        if key not in ('uppercase', 'lowercase'):
-            bool_test = dictionary[key][1]
-            # options with arguments
-            if type(bool_test) != bool:
-                argString += ' ' + dictionary[key][0] + ' ' + \
-                    dictionary[key][1] + ' '
-            # flags
-            if bool_test != str and bool_test == True:
-                argString += ' ' + dictionary[key][0] + ' '
-    return argString
-
-
 def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True):
     # use user-supplied arguments to produce unique files
     try:
         match = match_args(pattern)
         numberOfFiles = int(nFiles)
+        maxFiles = int(''.join(['9' for i in range(int(match['size']))]))
+        if _options['increment']:
+            if numberOfFiles > maxFiles:
+                sys.exit('Error: requested number of files exceeds maximum.')
 
         # create set of unique filenames
         def gen_files_set(numberOfFiles):
             if default:
-                return {gen_random_name() for i in range(numberOfFiles)}
+                return {gen_filename(zeroes=str(match['size']), count=i)
+                        for i in range(numberOfFiles)}
             else:
-                return {gen_random_name(match['prefix'], match['size'],
-                                        match['suffix'],
-                                        match['extension'], sep)
+                return {gen_filename(match['prefix'], match['size'],
+                                     match['suffix'],
+                                     match['extension'], sep,
+                                     zeroes=str(match['size']), count=i)
                         for i in range(numberOfFiles)
                         }
 
@@ -154,7 +146,10 @@ def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True):
                 name = name.union(remainder)
 
         # write files
-        options = shell_args()
+        if _options['touch_options']:
+            options = _options['touch_options']
+        else:
+            options = ''
         name = list(name)
         for i in range(numberOfFiles):
             run('touch {} {}'.format(options, name[i]), shell=True)
@@ -168,16 +163,18 @@ def main(*args):
     COMMANDLINE OPTIONS
     """
     parser = argparse.ArgumentParser(
-        prog=sys.argv[0][2:],
+        prog='xtouch', prefix_chars='+',
         description=dedent("""\
             %(prog)s is an automation wrapper for GNU touch. It creates a given 
-            number of files with random names in the present working directory.
-            """),
-        epilog='Author: Ike Davis License: MIT')
-    # Xtouch specific options
-    parser.add_argument('--version', help='print version info then exit',
+            number of files with either a user-defined or default pattern."""),
+        epilog='Author: Ike Davis, distributed via the MIT license')
+    parser.add_argument('options', nargs='*', metavar=('TOUCH_ARGS'),
+                        default='', help=dedent("""\
+                            Use original gnu touch options.
+                            """))
+    parser.add_argument('++version', help='print version info then exit',
                         version='!(prog)s 0.1 "Touchy"', action='version')
-    parser.add_argument('--generate', '-g', nargs=2,
+    parser.add_argument('++generate', '+g', nargs=2,
                         metavar=('PATTERN', 'NUMBER_OF_FILES'),
                         help=dedent("""\
                                     Create a NUMBER_OF_FILES according to a
@@ -191,67 +188,33 @@ def main(*args):
                                     word. Using 0 for 'int' requires that at least
                                     one 'str' contains a character other than '/'.
                                     """))
-    parser.add_argument('--files', '-f', nargs='?', const=1, type=int,
+    parser.add_argument('++files', '+f', nargs='?', const=1, type=int,
                         metavar=('NUMBER_OF_FILES'),
                         help=dedent("""Create a given NUMBER_OF_FILES in an 
                             '8.txt' pattern, defaulting to one file."""))
-    parser.add_argument('--uppercase', '-u', action='store_true',
+    parser.add_argument('++increment', '+i', action='store_true',
+                        help=dedent("""Increment filenames instead of generating
+                            random characters to replace 'int'."""))
+    parser.add_argument('++uppercase', '+u', action='store_true',
                         help=dedent("""Make all filenames uppercase."""))
-    parser.add_argument('--lowercase', '-l', action='store_true',
+    parser.add_argument('++lowercase', '+l', action='store_true',
                         help=dedent("""Make all filenames lowercase."""))
-
-    # GNU Touch Options
-    parser.add_argument('--accesstime', '-a', action='store_true',
-                        help=dedent("""Change only the access time."""))
-    parser.add_argument('--nocreate', '-c', action='store_true',
-                        help=dedent("""Do not create any files."""))
-    parser.add_argument('--date', '-d', nargs=1, metavar=('STRING'),
-                        help='parse STRING and use it instead of current time.')
-    parser.add_argument('--nodereference', '-n',  action='store_true',
-                        help=dedent("""\
-                            affect each symbolic link instead of any referenced 
-                            file (useful only on systems that can change the 
-                            timestamps of a symlink)"""))
-    parser.add_argument('--mtime', '-m', action='store_true',
-                        help=dedent("""Change only the modification time."""))
-    parser.add_argument('--reference', '-r', nargs=1, metavar=('REFERENCE'),
-                        help=dedent("""Use this file's times instead of current time."""))
-    parser.add_argument('--stamp', '-t', nargs=1, metavar=('STAMP'),
-                        help=dedent("""Use [[CC]YY]MMDDhhmm[.ss] instead of 
-                                    current time."""))
-    parser.add_argument('--original', '-o', nargs='*', metavar=('FILE'),
-                        help=dedent("""Basic touch without automation or options."""))
-
     args = parser.parse_args()
-    # set options dictionary values
-    # GNU touch
-    if args.accesstime:
-        _options['accesstime'][1] = args.accesstime
-    if args.nocreate:
-        _options['nocreate'][1] = args.nocreate
-    if args.date:
-        _options['date'][1] = args.date[0]
-    if args.nodereference:
-        _options['nodereference'][1] = args.nodereference
-    if args.mtime:
-        _options['modtime'][1] = args.mtime
-    if args.reference:
-        _options['reference'][1] = args.reference[0]
-    if args.stamp:
-        _options['stamp'][1] = args.stamp[0]
-    # xtouch custom option values
-    # add these xtouch-only options in _options to ignored tuple in shell_args
     _options['uppercase'] = args.uppercase
     _options['lowercase'] = args.lowercase
 
     # create options string and write requested files
+    if args.increment:
+        _options['increment'] = args.increment
+    if args.options:
+        _options['touch_options'] = ' '.join(args.options)
     if args.files:  # default filename pattern
         file_factory(nFiles=args.files)
-    elif args.generate:  # employ user filename pattern
+    elif args.generate:  # employ user-defined filename pattern
         file_factory(args.generate[0], args.generate[1], default=False)
-    else:  # for direct access to gnu touch
-        touch_str = input('Enter touch arguments: ')
-        run('touch {}'.format(touch_str), shell=True)
+    else:
+        run('touch {}'.format(_options['touch_options']), shell=True)
+
 
 if __name__ == '__main__':
     main(sys.argv[1:])
