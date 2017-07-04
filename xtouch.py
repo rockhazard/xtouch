@@ -75,8 +75,8 @@ def increment_filename(zeros, count):
     return file_count
 
 
-def gen_filename(prefix='/', size=8, suffix='/', ext="txt", sep='_',
-                 zeros=5, count=5):
+def gen_filename(switch=_options, prefix='/', size=8, suffix='/', ext="txt", sep='_',
+                 zeros=5, count=1):
     # executed by gen_files_set within file_factory
     characters = string.printable[0:62]
     sizeList = []
@@ -88,7 +88,7 @@ def gen_filename(prefix='/', size=8, suffix='/', ext="txt", sep='_',
     except ValueError:
         pass
     # either use increment feature or use size to build random names
-    if _options['increment'] and size > 0:
+    if switch['increment'] and size > 0:
         filename = increment_filename(zeros, count)
     else:
         for i in range(1, size + 1):
@@ -96,7 +96,7 @@ def gen_filename(prefix='/', size=8, suffix='/', ext="txt", sep='_',
         filename = "".join(sizeList)
     # either use increment feature or use ext to build random names
     if type(ext) is int:
-        if _options['increment']:
+        if switch['increment']:
             extzeros = int(ext)
             extension = increment_filename(extzeros, count)
         else:
@@ -119,15 +119,15 @@ def gen_filename(prefix='/', size=8, suffix='/', ext="txt", sep='_',
         filename += '.' + extension
 
     # convert filename to upper or lower case
-    if _options['uppercase']:
+    if switch['uppercase']:
         return filename.upper()
-    elif _options['lowercase']:
+    elif switch['lowercase']:
         return filename.lower()
     else:
         return filename
 
 
-def gen_files_set(numberOfFiles, zeros, default, match, sep):
+def gen_files_set(numberOfFiles, zeros, default, match, sep, switch=_options, ):
     # executed by file_factory
     # create set of unique filenames
     try:  # calculate maximum unique files to avoid infinite loop at set build
@@ -146,24 +146,23 @@ def gen_files_set(numberOfFiles, zeros, default, match, sep):
             maxUniqueFiles))
 
     if default:
-        return {gen_filename(zeros, count=i)
+        return {gen_filename(switch=_options, size=zeros, count=i)
                 for i in range(numberOfFiles)}
     else:
-        return {gen_filename(match['prefix'], match['size'],
-                             match['suffix'],
-                             match['extension'], sep,
-                             zeros, count=i)
+        return {gen_filename(switch=_options, prefix=match['prefix'], size=match['size'],
+                             suffix=match['suffix'], ext=match['extension'], 
+                             sep=sep, zeros=zeros, count=i)
                 for i in range(numberOfFiles)
                 }
 
 
-def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True):
+def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True, switch=_options):
     # executed by main
     # use user-supplied arguments to produce unique files
     match = match_args(pattern)
     numberOfFiles = int(nFiles)
     # avoid looping clobber
-    if _options['increment'] and int(match['size']) > 0:
+    if switch['increment'] and int(match['size']) > 0:
         maxFiles = int(''.join(['9' for i in range(int(match['size']))]))
         if numberOfFiles > maxFiles:
             sys.exit(dedent("""\
@@ -182,8 +181,8 @@ def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True):
             names = names.union(remainder)
 
     # write files
-    if _options['pos_options']:
-        pos_options = _options['pos_options']
+    if switch['pos_options']:
+        pos_options = switch['pos_options']
     else:
         pos_options = ''
     names = list(names)
@@ -200,8 +199,17 @@ def main(*args):
         prog='xtouch', prefix_chars='+',
         description=dedent("""\
             %(prog)s is an automation wrapper for GNU touch. It creates a given
-            number of files with either a user-defined or default pattern."""),
-        epilog='Author: Ike Davis, distributed via the MIT license')
+            number of files with either a user-defined or default pattern.
+            Pattern is string.integer.string.string|integer.
+            Examples: 
+            xtouch +ig page_.3._mock.html 1 creates page_000_mock.html
+            xtouch +g /.1.log 2 creates 0.log and 1.log
+            xtouch +ig mock_./.3 14 creates mock_.000 ... mock_.013
+            xtouch +g mock_./.3 14 creates mock_.sI0 ... mock_.Ghy
+            The integer defaults to a number of random alphanumeric characters
+            equal to the integer, unless +i is used to increment the filename.
+            """),
+        epilog='Author: Ike Davis, distributed under the MIT license')
     parser.add_argument('options', nargs='*', metavar=('TOUCH_ARGS'),
                         default='', help=dedent("""\
                             Use original gnu touch options.
