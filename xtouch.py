@@ -29,13 +29,14 @@ from pathlib import Path
 from subprocess import run
 __author__ = "Ike Davis"
 
-_options = dict(uppercase=False, lowercase=False, touch_options=False,
+_options = dict(uppercase=False, lowercase=False, pos_options=False,
                 increment=False)
 
 
-# use regex to parse the --generate option's arguments
-# matches against pattern "str.int.str.str|int"
 def match_args(args):
+    # executed by file_factory
+    # use regex to parse the --generate option's arguments
+    # matches against pattern "str.int.str.str||int"
     pattern = r'^(?P<prefix>\S*)\.(?P<size>\d+)\.(?P<suffix>\S*)\.(?P<extension>\S*)$'
     if re.compile(pattern).match(args):
         matcher = re.search(pattern, args)
@@ -53,6 +54,7 @@ def match_args(args):
 
 
 def random_word(dictionary="/usr/share/dict/words"):
+    # executed by gen_filename
     # defaults to Linux word dictionary to get random word for filenames
     if not Path(dictionary).is_file():
         dictionary = input('Enter path to a newline-separated word list: ')
@@ -64,15 +66,18 @@ def random_word(dictionary="/usr/share/dict/words"):
     return word[0]
 
 
-def increment_filename(zeroes, count):
+def increment_filename(zeros, count):
+    # executed by gen_filename
+    # returns incrementing count with proper leading zeros
     place = len(str(count))
-    zeroCount = int(zeroes) - place
+    zeroCount = int(zeros) - place
     file_count = '0' * zeroCount + str(count)
     return file_count
 
 
 def gen_filename(prefix='/', size=8, suffix='/', ext="txt", sep='_',
-                 zeroes=5, count=5):
+                 zeros=5, count=5):
+    # executed by gen_files_set within file_factory
     characters = string.printable[0:62]
     sizeList = []
     extList = []
@@ -84,15 +89,16 @@ def gen_filename(prefix='/', size=8, suffix='/', ext="txt", sep='_',
         pass
     # either use increment feature or use size to build random names
     if _options['increment'] and size > 0:
-        filename = increment_filename(zeroes, count)
+        filename = increment_filename(zeros, count)
     else:
         for i in range(1, size + 1):
             sizeList.append(random.choice(characters))
         filename = "".join(sizeList)
+    # either use increment feature or use ext to build random names
     if type(ext) is int:
         if _options['increment']:
-            extzeroes = int(ext)
-            extension = increment_filename(extzeroes, count)
+            extzeros = int(ext)
+            extension = increment_filename(extzeros, count)
         else:
             for i in range(1, ext + 1):
                 extList.append(random.choice(characters))
@@ -121,7 +127,8 @@ def gen_filename(prefix='/', size=8, suffix='/', ext="txt", sep='_',
         return filename
 
 
-def gen_files_set(numberOfFiles, zeroes, default, match, sep):
+def gen_files_set(numberOfFiles, zeros, default, match, sep):
+    # executed by file_factory
     # create set of unique filenames
     try:  # calculate maximum unique files to avoid infinite loop at set build
         sizeMaxUniqueFiles = int(
@@ -139,18 +146,19 @@ def gen_files_set(numberOfFiles, zeroes, default, match, sep):
             maxUniqueFiles))
 
     if default:
-        return {gen_filename(zeroes, count=i)
+        return {gen_filename(zeros, count=i)
                 for i in range(numberOfFiles)}
     else:
         return {gen_filename(match['prefix'], match['size'],
                              match['suffix'],
                              match['extension'], sep,
-                             zeroes, count=i)
+                             zeros, count=i)
                 for i in range(numberOfFiles)
                 }
 
 
 def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True):
+    # executed by main
     # use user-supplied arguments to produce unique files
     match = match_args(pattern)
     numberOfFiles = int(nFiles)
@@ -174,13 +182,13 @@ def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True):
             names = names.union(remainder)
 
     # write files
-    if _options['touch_options']:
-        options = _options['touch_options']
+    if _options['pos_options']:
+        pos_options = _options['pos_options']
     else:
-        options = ''
+        pos_options = ''
     names = list(names)
     for i in range(numberOfFiles):
-        run('touch {} {}'.format(options, names[i]), shell=True)
+        run('touch {} {}'.format(pos_options, names[i]), shell=True)
     print('Generated {} files.'.format(len(names)))
 
 
@@ -233,13 +241,13 @@ def main(*args):
     if args.increment:
         _options['increment'] = args.increment
     if args.options:
-        _options['touch_options'] = ' '.join(args.options)
+        _options['pos_options'] = ' '.join(args.options)
     if args.files:  # default filename pattern
         file_factory(nFiles=args.files)
     elif args.generate:  # employ user-defined filename pattern
         file_factory(args.generate[0], args.generate[1], default=False)
     else:
-        run('touch {}'.format(_options['touch_options']), shell=True)
+        run('touch {}'.format(_options['pos_options']), shell=True)
 
 
 if __name__ == '__main__':
