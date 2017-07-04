@@ -6,7 +6,7 @@ from mock import Mock
 import xtouch
 
 
-class Test(unittest.TestCase):
+class TestXtouch(unittest.TestCase):
 
     def setUp(self):
         self._options = xtouch._options
@@ -44,10 +44,12 @@ class Test(unittest.TestCase):
 
     def test_gen_files_set(self):
         self.testopts = self._options
-        self.testopts['increment'] = True  # unable to assert this value yet
+        self.testopts['increment'] = True
         match = self.match_args_output1
         result_gen_files_set = self.xtouch.gen_files_set(numberOfFiles=2,
-                                                         zeros=2, default=False, match=match, sep='_', switch=self.testopts)
+                                                         zeros=2, default=False, 
+                                                         match=match, sep='_', 
+                                                         switch=self.testopts)
         self.assertEqual(result_gen_files_set,
                          {'test_00_mock.tmp', 'test_01_mock.tmp'}, 'Not equal')
 
