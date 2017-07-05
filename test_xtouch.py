@@ -2,7 +2,7 @@
 
 
 import unittest
-from mock import Mock
+from unittest.mock import Mock
 import xtouch
 
 
@@ -11,16 +11,16 @@ class TestXtouch(unittest.TestCase):
     def setUp(self):
         self._options = xtouch._options
         self.xtouch = xtouch
-        self.match_args_output1 = {'prefix': 'test_', 'size': '5',
-                                   'suffix': '_mock', 'extension': 'tmp'}
-        self.mock = Mock()
+        self.match_args_output1 = {'prefix': 'str_', 'size': '5',
+                                   'suffix': '_str', 'extension': 'tmp'}
+        self.pattern = 'str_.5._str.tmp'
 
-    def tearDown(self):
-        # cleanup operations: close/remove files, etc.
-        pass
+    # def tearDown(self):
+    #     # cleanup operations: close/remove files, etc.
+    #     pass
 
     def test_match_args(self):
-        match = self.xtouch.match_args('test_.5._mock.tmp')
+        match = self.xtouch.match_args(self.pattern)
         self.assertEqual(match, self.match_args_output1, 'Not equal')
 
     # def test_random_word(self): # needs mock word file and wordList
@@ -36,29 +36,32 @@ class TestXtouch(unittest.TestCase):
         self.testopts = self._options
         self.testopts['increment'] = True
         resul_gen_filename = self.xtouch.gen_filename(switch=self.testopts,
-                                                      prefix='test_', size=5,
+                                                      prefix='str_', size=5,
                                                       ext=3, suffix='_test',
                                                       count=1)
         self.assertEqual(resul_gen_filename,
-                         'test_00001_test.001', 'Not equal')
+                         'str_00001_test.001', 'Not equal')
 
     def test_gen_files_set(self):
         self.testopts = self._options
         self.testopts['increment'] = True
         match = self.match_args_output1
         result_gen_files_set = self.xtouch.gen_files_set(numberOfFiles=2,
-                                                         zeros=2, default=False, 
-                                                         match=match, sep='_', 
+                                                         zeros=2, default=False,
+                                                         match=match, sep='_',
                                                          switch=self.testopts)
         self.assertEqual(result_gen_files_set,
-                         {'test_00_mock.tmp', 'test_01_mock.tmp'}, 'Not equal')
+                         {'str_00_str.tmp', 'str_01_str.tmp'}, 'Not equal')
 
-    # def test_file_factory(self):
-    #     self.testopts = self._options
-    #     self.testopts['increment'] = True
-    #     match = self.match_args_output1
-    #     result_file_factory = self.xtouch.file_factory(switch=self.testopts)
-    #     self.assertEqual(result_file_factory, output, 'Not equal')
+    def test_file_factory(self):
+        self.testopts = self._options
+        self.testopts['increment'] = True
+        self.testopts['pos_options'] = '--date=02/03/2017'
+        mock_subprocess = Mock(name='ff_subprocess')
+        self.xtouch.file_factory(pattern=self.pattern, switch=self.testopts,
+                                 nFiles=101, cmd=mock_subprocess, default=False)
+        mock_subprocess.run.assert_any_call(
+            'touch --date=02/03/2017 str_00100_str.tmp', shell=True)
 
 '''
 ASSERTS:

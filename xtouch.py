@@ -26,7 +26,8 @@ import re
 import string
 from textwrap import dedent
 from pathlib import Path
-from subprocess import run
+# from subprocess import run
+import subprocess
 __author__ = "Ike Davis"
 
 _options = dict(uppercase=False, lowercase=False, pos_options=False,
@@ -150,13 +151,14 @@ def gen_files_set(numberOfFiles, zeros, default, match, sep, switch=_options, ):
                 for i in range(numberOfFiles)}
     else:
         return {gen_filename(switch=_options, prefix=match['prefix'], size=match['size'],
-                             suffix=match['suffix'], ext=match['extension'], 
+                             suffix=match['suffix'], ext=match['extension'],
                              sep=sep, zeros=zeros, count=i)
                 for i in range(numberOfFiles)
                 }
 
 
-def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True, switch=_options):
+def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True,
+                 switch=_options, cmd=subprocess):
     # executed by main
     # use user-supplied arguments to produce unique files
     match = match_args(pattern)
@@ -179,15 +181,17 @@ def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True, switch=_o
             remainder = gen_files_set(
                 diff, str(match['size']), default, match, sep)
             names = names.union(remainder)
+    names = list(names)
 
-    # write files
+    # resolve positional arguments for run string
     if switch['pos_options']:
         pos_options = switch['pos_options']
     else:
         pos_options = ''
-    names = list(names)
+
+    # write files and report
     for i in range(numberOfFiles):
-        run('touch {} {}'.format(pos_options, names[i]), shell=True)
+        cmd.run('touch {} {}'.format(pos_options, names[i]), shell=True)
     print('Generated {} files.'.format(len(names)))
 
 
@@ -255,7 +259,7 @@ def main(*args):
     elif args.generate:  # employ user-defined filename pattern
         file_factory(args.generate[0], args.generate[1], default=False)
     else:
-        run('touch {}'.format(_options['pos_options']), shell=True)
+        subprocess.run('touch {}'.format(_options['pos_options']), shell=True)
 
 
 if __name__ == '__main__':
