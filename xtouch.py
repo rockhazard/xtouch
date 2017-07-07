@@ -76,8 +76,8 @@ def increment_filename(zeros, count):
     return file_count
 
 
-def gen_filename(switch=_options, prefix='/', size=8, suffix='/', ext="txt", sep='_',
-                 zeros=5, count=1):
+def gen_filename(switch=_options, prefix='/', size=8, suffix='/', ext="txt",
+                 sep='_', zeros=5, count=1):
     # executed by gen_files_set within file_factory
     characters = string.printable[0:62]
     sizeList = []
@@ -150,9 +150,10 @@ def gen_files_set(numberOfFiles, zeros, default, match, sep, switch=_options, ):
         return {gen_filename(switch=_options, size=zeros, count=i)
                 for i in range(numberOfFiles)}
     else:
-        return {gen_filename(switch=_options, prefix=match['prefix'], size=match['size'],
-                             suffix=match['suffix'], ext=match['extension'],
-                             sep=sep, zeros=zeros, count=i)
+        return {gen_filename(switch=_options, prefix=match['prefix'],
+                             size=match['size'], suffix=match['suffix'],
+                             ext=match['extension'], sep=sep, zeros=zeros,
+                             count=i)
                 for i in range(numberOfFiles)
                 }
 
@@ -257,7 +258,8 @@ def main(*args):
     if args.files:  # default filename pattern
         file_factory(nFiles=args.files)
     elif args.generate:  # employ user-defined filename pattern
-        file_factory(args.generate[0], args.generate[1], default=False)
+        file_factory(pattern=args.generate[0], nFiles=args.generate[1],
+                     default=False)
     else:
         subprocess.run('touch {}'.format(_options['pos_options']), shell=True)
 
