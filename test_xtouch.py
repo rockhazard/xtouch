@@ -13,16 +13,18 @@ class TestXtouch(unittest.TestCase):
         self.match_args_output1 = {'prefix': 'str_', 'size': '5',
                                    'suffix': '_str', 'extension': 'tmp'}
         self.pattern = 'str_.5._str.tmp'
-        self.wordList = ['puns', 'premise', 'rustle', 'encephalitis']
+        self.wordList = ['puns', 'premise', 'rustle', 'canine']
 
     def test_match_args(self):
         match = xtouch.match_args(self.pattern)
         self.assertEqual(match, self.match_args_output1, 'Not equal')
 
-    @patch('builtins.open', mock_open(read_data='puns\npremise\nrustle\nencephalitis'))
-    def test_random_word(self):
+    @patch('builtins.open', mock_open(read_data='puns\npremise\nrustle\ncanine'))
+    @patch('xtouch.Path')
+    def test_random_word(self, m):
         word = xtouch.random_word()
         self.assertIn(word, self.wordList, '{} not in list'.format(word))
+        print('Mock Path called: ', m.called)
 
     def test_increment_filename(self):
         result_increment_filename = xtouch.increment_filename(
