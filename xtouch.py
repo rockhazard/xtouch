@@ -196,19 +196,22 @@ def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True,
     print('Generated {} files.'.format(len(names)))
 
 def process_list(timestamp, file):
-    # pass list of files from a text file to touch
+    # pass each file from a list of files to touch
     with open(file) as f:
         moddedFiles = set(f.read().splitlines())
 
     count = 0
     failed = 0
     for i in moddedFiles:
-        if Path(i).is_file:
+        if Path(i).is_file():
             subprocess.run('touch -m -t {} "{}"'.format(timestamp, i),shell=True)
             count += 1
         else:
-            print('FAILED: {}'.format(i))
-            failed += 1
+            if '#' in i[0]: # ignore commented lines
+                continue
+            else:
+                print('FAILED: {}'.format(i))
+                failed += 1
     print('{} files processed.\n{} files failed'.format(count, failed))
 
 def main(*args):
