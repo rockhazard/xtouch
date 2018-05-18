@@ -195,6 +195,21 @@ def file_factory(pattern='/.8./.txt', nFiles=1, sep='_', default=True,
         cmd.run('touch {} {}'.format(pos_options, names[i]), shell=True)
     print('Generated {} files.'.format(len(names)))
 
+def process_list(timestamp, file):
+    # pass list of files from a text file to touch
+    with open(file) as f:
+        moddedFiles = set(f.read().splitlines())
+
+    count = 0
+    failed = 0
+    for i in moddedFiles:
+        if Path(i).is_file:
+            subprocess.run('touch -m -t {} "{}"'.format(timestamp, i),shell=True)
+            count += 1
+        else:
+            print('FAILED: {}'.format(i))
+            failed += 1
+    print('{} files processed.\n{} files failed'.format(count, failed))
 
 def main(*args):
     """
@@ -235,6 +250,12 @@ def main(*args):
                                     word. Using 0 for 'int' requires that at least
                                     one 'str' contains a character other than '/'.
                                     """))
+    parser.add_argument('++list', '+c', nargs=2,
+                        metavar=('TIMESTAMP', 'FILES_LIST'),
+                        help=dedent("""\
+                                    Use touch modify each given file in FILES_LIST 
+                                    with given TIMESTAMP.
+                                    """))
     parser.add_argument('++files', '+f', nargs='?', const=1, type=int,
                         metavar=('NUMBER_OF_FILES'),
                         help=dedent("""Create a given NUMBER_OF_FILES in an
@@ -257,6 +278,8 @@ def main(*args):
         _options['pos_options'] = ' '.join(args.options)
     if args.files:  # default filename pattern
         file_factory(nFiles=args.files)
+    elif args.list:
+        process_list(timestamp=args.list[0], file=args.list[1])
     elif args.generate:  # employ user-defined filename pattern
         file_factory(pattern=args.generate[0], nFiles=args.generate[1],
                      default=False)
